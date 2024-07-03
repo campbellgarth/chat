@@ -7,7 +7,6 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
-  Image,
   ImageBackground,
   TouchableOpacity,
   Platform,

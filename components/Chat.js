@@ -1,8 +1,33 @@
-import { useEffect } from 'react';
-import { StyleSheet, View, Text } from 'react-native';
+import { useState, useEffect } from 'react';
+import { StyleSheet, View, KeyboardAvoidingView, Platform } from 'react-native';
+import { Bubble, GiftedChat } from 'react-native-gifted-chat';
 
 const Chat = ({ route, navigation }) => {
   const { name, color } = route.params; //extracts name and color inputs from start screen
+  const [messages, setMessages] = useState([]);
+  const onSend = (newMessages) => {
+    //appends new messages to message state
+    setMessages((previousMessages) =>
+      GiftedChat.append(previousMessages, newMessages)
+    );
+  };
+
+  const renderBubble = (props) => {
+    //sets chat bubble colors
+    return (
+      <Bubble
+        {...props}
+        wrapperStyle={{
+          right: {
+            backgroundColor: '#EA9087', // user's messages
+          },
+          left: {
+            backgroundColor: '#EFAF96', //everyone else's messages
+          },
+        }}
+      />
+    );
+  };
 
   // Utility function to determine if a color is dark or light
   const isColorDark = (color) => {
@@ -24,12 +49,41 @@ const Chat = ({ route, navigation }) => {
 
   useEffect(() => {
     navigation.setOptions({ title: name }); //sets name as title
+    setMessages([
+      //sets a static message plus a system message
+      {
+        _id: 1,
+        text: 'Hello ' + `${name}`, //first message in chat
+        createdAt: new Date(),
+        user: {
+          _id: 2,
+          name: 'React Native',
+          avatar: 'https://placeimg.com/140/140/any',
+        },
+      },
+      {
+        _id: 2,
+        text: `${name}` + ' has entered the chat', //system message
+        createdAt: new Date(),
+        system: true,
+      },
+    ]);
   }, []);
   return (
     <View
       style={[styles.container, { backgroundColor: color }]} //sets background color
     >
-      <Text style={[styles.text, { color: textColor }]}>Hello {name}</Text>
+      <GiftedChat //renders chat screen
+        messages={messages}
+        renderBubble={renderBubble}
+        onSend={(messages) => onSend(messages)}
+        user={{
+          _id: 1,
+        }}
+      />
+      <KeyboardAvoidingView //keeps keyboard from covering text box where typing
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      />
     </View>
   );
 };
@@ -38,7 +92,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
   },
   text: {
     fontSize: 20,
