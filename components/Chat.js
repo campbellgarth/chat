@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
 import { StyleSheet, View, KeyboardAvoidingView, Platform } from 'react-native';
 import { Bubble, GiftedChat } from 'react-native-gifted-chat';
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+} from 'firebase/firestore';
 
-const Chat = ({ route, navigation }) => {
-  const { name, color } = route.params; //extracts name and color inputs from start screen
+const Chat = ({ db, route, navigation }) => {
+  const { userID, name, color } = route.params; //extracts name and color inputs from start screen
   const [messages, setMessages] = useState([]);
   const onSend = (newMessages) => {
-    //appends new messages to message state
-    setMessages((previousMessages) =>
-      GiftedChat.append(previousMessages, newMessages)
-    );
+    //adds new messages to collection
+    const newMessageRef = addDoc(collection(db, 'messages'), newMessages[0]);
   };
 
   const renderBubble = (props) => {
@@ -49,25 +54,25 @@ const Chat = ({ route, navigation }) => {
 
   useEffect(() => {
     navigation.setOptions({ title: name }); //sets name as title
-    setMessages([
-      //sets a static message plus a system message
-      {
-        _id: 1,
-        text: 'Hello ' + `${name}`, //first message in chat
-        createdAt: new Date(),
-        user: {
-          _id: 2,
-          name: 'React Native',
-          avatar: 'https://placeimg.com/140/140/any',
-        },
-      },
-      {
-        _id: 2,
-        text: `${name}` + ' has entered the chat', //system message
-        createdAt: new Date(),
-        system: true,
-      },
-    ]);
+
+    const q = query(collection(db, 'messages'), orderBy('createdAt', 'desc')); //puts rendered messages in order of oldest to newest
+
+    const unsubMessages = onSnapshot(q, (docs) => {
+      //renders new messages to screen
+      let newMessages = [];
+      docs.forEach((doc) => {
+        newMessages.push({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: new Date(doc.data().createdAt.toMillis()),
+        });
+      });
+      setMessages(newMessages);
+    });
+    //clean up code to avoid memory leaks
+    return () => {
+      if (unsubMessages) unsubMessages();
+    };
   }, []);
   return (
     <View
@@ -78,7 +83,8 @@ const Chat = ({ route, navigation }) => {
         renderBubble={renderBubble}
         onSend={(messages) => onSend(messages)}
         user={{
-          _id: 1,
+          _id: userID,
+          name: name,
         }}
       />
       <KeyboardAvoidingView //keeps keyboard from covering text box where typing

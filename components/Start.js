@@ -10,12 +10,31 @@ import {
   ImageBackground,
   TouchableOpacity,
   Platform,
+  Alert,
 } from 'react-native';
 
+import { getAuth, signInAnonymously } from 'firebase/auth';
+
 const Start = ({ navigation }) => {
+  const auth = getAuth();
   const [name, setName] = useState('');
   const [color, setColor] = useState('');
   const image = require('../assets/background-image.png');
+
+  const signInUser = () => {
+    //anon signin, passing on userid, username, and background color
+    signInAnonymously(auth)
+      .then((result) => {
+        navigation.navigate('Chat', {
+          userID: result.user.uid,
+          name: name,
+          color: color,
+        });
+      })
+      .catch((error) => {
+        Alert.alert('Unable to sign in, try again later.');
+      });
+  };
 
   return (
     <KeyboardAvoidingView //keeps keyboard from covering text box where typing
@@ -83,11 +102,11 @@ const Start = ({ navigation }) => {
                   ></TouchableOpacity>
                 </View>
               </View>
-              <TouchableOpacity //sends to chat screen sending name and background color as props
+              <TouchableOpacity //signs in user
                 style={styles.chatButton}
-                onPress={() =>
-                  navigation.navigate('Chat', { name: name, color: color })
-                }
+                onPress={() => {
+                  signInUser();
+                }}
               >
                 <Text style={styles.chatButtonText}>Start Chatting</Text>
               </TouchableOpacity>
