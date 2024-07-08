@@ -64,7 +64,6 @@ const Chat = ({ db, route, navigation, isConnected }) => {
       // unregister current onSnapshot() listener to avoid registering multiple listeners when useEffect code is re-executed
       if (unsubMessages) unsubMessages();
       unsubMessages = null;
-
       const q = query(collection(db, 'messages'), orderBy('createdAt', 'desc')); //puts rendered messages in order of oldest to newest
 
       unsubMessages = onSnapshot(q, (docs) => {
@@ -81,6 +80,7 @@ const Chat = ({ db, route, navigation, isConnected }) => {
         setMessages(newMessages);
       });
     } else loadCachedMessages(); //load messages that are in the cache if not online
+
     //clean up code to avoid memory leaks
     return () => {
       if (unsubMessages) unsubMessages();
