@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { StyleSheet, View, KeyboardAvoidingView, Platform } from 'react-native';
-import { Bubble, GiftedChat } from 'react-native-gifted-chat';
+import { Bubble, GiftedChat, InputToolbar } from 'react-native-gifted-chat';
 import {
   collection,
   addDoc,
@@ -8,13 +8,14 @@ import {
   query,
   orderBy,
 } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const Chat = ({ db, route, navigation }) => {
+const Chat = ({ db, route, navigation, isConnected }) => {
   const { userID, name, color } = route.params; //extracts name and color inputs from start screen
   const [messages, setMessages] = useState([]);
   const onSend = (newMessages) => {
     //adds new messages to collection
-    const newMessageRef = addDoc(collection(db, 'messages'), newMessages[0]);
+    addDoc(collection(db, 'messages'), newMessages[0]);
   };
 
   const renderBubble = (props) => {
@@ -33,7 +34,11 @@ const Chat = ({ db, route, navigation }) => {
       />
     );
   };
-
+  const renderInputToolbar = (props) => {
+    //if disconnected from the internet do not show keyboard to send new messages
+    if (isConnected) return <InputToolbar {...props} />;
+    else return null;
+  };
   // Utility function to determine if a color is dark or light
   const isColorDark = (color) => {
     // Strip the leading '#' if present
@@ -52,28 +57,48 @@ const Chat = ({ db, route, navigation }) => {
   };
   const textColor = isColorDark(color) ? '#FFFFFF' : '#000000'; //sets text color to white if the background is dark and black if it's light
 
+  let unsubMessages;
   useEffect(() => {
     navigation.setOptions({ title: name }); //sets name as title
+    if (isConnected === true) {
+      // unregister current onSnapshot() listener to avoid registering multiple listeners when useEffect code is re-executed
+      if (unsubMessages) unsubMessages();
+      unsubMessages = null;
 
-    const q = query(collection(db, 'messages'), orderBy('createdAt', 'desc')); //puts rendered messages in order of oldest to newest
+      const q = query(collection(db, 'messages'), orderBy('createdAt', 'desc')); //puts rendered messages in order of oldest to newest
 
-    const unsubMessages = onSnapshot(q, (docs) => {
-      //renders new messages to screen
-      let newMessages = [];
-      docs.forEach((doc) => {
-        newMessages.push({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: new Date(doc.data().createdAt.toMillis()),
+      unsubMessages = onSnapshot(q, (docs) => {
+        //renders new messages to screen
+        let newMessages = [];
+        docs.forEach((doc) => {
+          newMessages.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: new Date(doc.data().createdAt.toMillis()),
+          });
         });
+        cacheMessages(newMessages);
+        setMessages(newMessages);
       });
-      setMessages(newMessages);
-    });
+    } else loadCachedMessages(); //load messages that are in the cache if not online
     //clean up code to avoid memory leaks
     return () => {
       if (unsubMessages) unsubMessages();
     };
-  }, []);
+  }, [isConnected]);
+  const cacheMessages = async (messagesToCache) => {
+    //caches the new messages
+    try {
+      await AsyncStorage.setItem('messages', JSON.stringify(messagesToCache));
+    } catch (error) {
+      console.log(error.message);
+    }
+  };
+
+  const loadCachedMessages = async () => {
+    const cachedMessages = (await AsyncStorage.getItem('messages')) || [];
+    setMessages(JSON.parse(cachedMessages));
+  };
   return (
     <View
       style={[styles.container, { backgroundColor: color }]} //sets background color
@@ -81,6 +106,7 @@ const Chat = ({ db, route, navigation }) => {
       <GiftedChat //renders chat screen
         messages={messages}
         renderBubble={renderBubble}
+        renderInputToolbar={renderInputToolbar}
         onSend={(messages) => onSend(messages)}
         user={{
           _id: userID,
