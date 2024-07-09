@@ -11,6 +11,7 @@ import {
   disableNetwork,
   enableNetwork,
 } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 import { LogBox } from 'react-native'; //ignore warnings in expo
 LogBox.ignoreAllLogs();
@@ -43,6 +44,7 @@ const App = () => {
 
   // Initialize Cloud Firestore and get a reference to the service
   const db = getFirestore(app);
+  const storage = getStorage(app);
 
   return (
     <NavigationContainer>
@@ -53,6 +55,7 @@ const App = () => {
             <Chat
               isConnected={connectionStatus.isConnected}
               db={db}
+              storage={storage}
               {...props}
             />
           )}

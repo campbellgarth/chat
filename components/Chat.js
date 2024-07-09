@@ -9,8 +9,10 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import CustomActions from './CustomActions';
+import MapView from 'react-native-maps';
 
-const Chat = ({ db, route, navigation, isConnected }) => {
+const Chat = ({ db, route, navigation, isConnected, storage }) => {
   const { userID, name, color } = route.params; //extracts name and color inputs from start screen
   const [messages, setMessages] = useState([]);
   const onSend = (newMessages) => {
@@ -99,6 +101,30 @@ const Chat = ({ db, route, navigation, isConnected }) => {
     const cachedMessages = (await AsyncStorage.getItem('messages')) || [];
     setMessages(JSON.parse(cachedMessages));
   };
+
+  const renderCustomActions = (props) => {
+    //renders the + box for taking a pic/location
+    return <CustomActions storage={storage} userID={userID} {...props} />;
+  };
+  const renderCustomView = (props) => {
+    //renders location view
+    const { currentMessage } = props;
+    if (currentMessage.location) {
+      //if current message includes a location, render the map view
+      return (
+        <MapView
+          style={{ width: 150, height: 100, borderRadius: 13, margin: 3 }}
+          region={{
+            latitude: currentMessage.location.latitude,
+            longitude: currentMessage.location.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          }}
+        />
+      );
+    }
+    return null;
+  };
   return (
     <View
       style={[styles.container, { backgroundColor: color }]} //sets background color
@@ -107,6 +133,8 @@ const Chat = ({ db, route, navigation, isConnected }) => {
         messages={messages}
         renderBubble={renderBubble}
         renderInputToolbar={renderInputToolbar}
+        renderActions={renderCustomActions}
+        renderCustomView={renderCustomView}
         onSend={(messages) => onSend(messages)}
         user={{
           _id: userID,
