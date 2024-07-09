@@ -32,7 +32,7 @@ and location data.
 
 ## Operation manual
 
-To use this project, please fork on [Github](https://github.com/campbellgarth/chat)
+To use this project, please clone on [Github](https://github.com/campbellgarth/chat)
 
 ### Dependencies
 
